@@ -58,7 +58,7 @@ def run_agent(user_message: str, max_turns: int = 10) -> str:
             tools=TOOLS,
             messages=messages,
         )
-
+        print(response.content) 
         # Did the model ask to use a tool, or is it done talking?
         tool_use_blocks = [b for b in response.content if b.type == "tool_use"]
 
