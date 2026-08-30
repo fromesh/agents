@@ -19,7 +19,7 @@ import os
 from anthropic import Anthropic
 
 client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-MODEL = "claude-sonnet-4-6"
+MODEL = "claude-sonnet-5"
 
 
 # --- Step 1: define a tool ---------------------------------------------------
