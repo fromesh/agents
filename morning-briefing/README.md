@@ -80,7 +80,15 @@ export ANTHROPIC_API_KEY=sk-ant-...
 export BRIEFING_TO_EMAIL=you@gmail.com
 export BRIEFING_LAT=34.05      # optional, defaults to Los Angeles
 export BRIEFING_LON=-118.24    # optional
+
+# Calendars (optional). Default: every calendar you have checked in Google
+# Calendar. Override with "primary" or a comma-separated list of calendar ids.
+# export BRIEFING_CALENDARS=primary
+# export BRIEFING_CALENDARS_EXCLUDE="SMCHS Bell Schedule,Holidays in United States"
 ```
+
+Event times are shown in the machine's local timezone; all-day events from
+shared calendars are tagged with the calendar name.
 
 ### 6. last30days API keys (optional — fuller source coverage)
 
