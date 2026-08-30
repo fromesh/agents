@@ -124,23 +124,60 @@ AI agents | --subreddits AI_Agents,singularity,LocalLLaMA
 Elon Musk latest posts | --x-handle elonmusk
 ```
 
-## Scheduling with cron
+## Scheduling (daily, unattended)
+
+`run.sh` is the entry point for scheduled runs — it sets `PATH` (so the
+`claude` CLI is found) and sources `env.sh` for secrets, since launchd and
+cron don't load your shell rc.
+
+### env.sh (gitignored — create it)
 
 ```bash
-which claude ; readlink -f .venv/bin/python ; pwd
+cp /dev/null env.sh && open -e env.sh
 ```
 
 ```
-0 7 * * * cd /abs/path/to/agents/morning-briefing && \
-  ANTHROPIC_API_KEY=sk-ant-... BRIEFING_TO_EMAIL=you@gmail.com \
-  PATH=/abs/dir/of/claude:/usr/bin:/bin \
-  /abs/path/to/.venv/bin/python agent.py >> briefing.log 2>&1
+export ANTHROPIC_API_KEY=sk-ant-...
+export BRIEFING_TO_EMAIL=you@gmail.com
+# export BRIEFING_LAT=34.05   # optional
+# export BRIEFING_LON=-118.24
 ```
 
-Notes:
-- Cron has a minimal env — it won't see your shell exports or find `claude` on
-  PATH. Set both explicitly (or source a small `env.sh`).
-- `>> briefing.log 2>&1` keeps a log; the run also prints turn count, elapsed,
-  and cost on exit.
+```bash
+chmod 600 env.sh
+```
+
+### launchd (recommended on macOS)
+
+```bash
+cp com.romesh.morning-briefing.plist.example \
+   ~/Library/LaunchAgents/com.romesh.morning-briefing.plist
+# adjust the paths inside if your checkout isn't ~/agents
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.romesh.morning-briefing.plist
+```
+
+| Action | Command |
+|---|---|
+| Run now (test) | `launchctl kickstart -p gui/$(id -u)/com.romesh.morning-briefing` |
+| Stop scheduling | `launchctl bootout gui/$(id -u)/com.romesh.morning-briefing` |
+| After editing the plist | `bootout`, then `bootstrap` again |
+| Check it's loaded | `launchctl list \| grep morning` |
+
+Runs at 07:00, or the next wake if the Mac was asleep then. Output (including
+the turn/cost summary line) goes to `briefing.log`.
+
+### cron (alternative)
+
+```
+0 7 * * * /Users/you/agents/morning-briefing/run.sh
+```
+
+Cron won't wake a sleeping Mac; launchd will run the job on next wake.
+
+### Keeping it working
+
+- **Publish the Google OAuth consent screen** — in "Testing" mode the refresh
+  token dies after 7 days and the job starts failing. Publishing needs no
+  review for these scopes.
 - `git submodule update --remote vendor/last30days-skill` occasionally to pull
   engine updates.

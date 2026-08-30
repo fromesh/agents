@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Daily scheduler for the morning-briefing agent (macOS launchd).
+
+  Install:
+    cp com.romesh.morning-briefing.plist.example \
+       ~/Library/LaunchAgents/com.romesh.morning-briefing.plist
+    # edit the paths below to match your checkout, then:
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.romesh.morning-briefing.plist
+
+  Run it now (test):   launchctl kickstart -p gui/$(id -u)/com.romesh.morning-briefing
+  Stop scheduling:     launchctl bootout gui/$(id -u)/com.romesh.morning-briefing
+  Reload after edits:  bootout, then bootstrap again
+
+  launchd runs the job at the next wake if the Mac was asleep at 07:00.
+  Secrets live in env.sh (sourced by run.sh), not here.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.romesh.morning-briefing</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/rameshfernando/agents/morning-briefing/run.sh</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>7</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/rameshfernando/agents/morning-briefing/briefing.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/rameshfernando/agents/morning-briefing/briefing.log</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>
