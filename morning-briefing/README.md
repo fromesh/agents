@@ -1,69 +1,146 @@
 # morning-briefing
 
-Gathers weather, today's Google Calendar events, and news headlines; asks Claude
-to synthesize a short briefing; emails it to you via Gmail. Designed to run
+Gathers weather + today's Google Calendar, researches a fixed topic list with
+the **last30days** engine (multi-platform social/web research), asks Claude to
+synthesize a short briefing, and emails it to you via Gmail. Designed to run
 unattended every morning via cron.
 
 ## What it demonstrates
 
-The other common agent shape (compare to `../example-agent`, which is a
-tool-use loop): gather context from a few sources up front, hand it to the
-model **once** to synthesize, then take a real-world action (send email) with
-the result. No back-and-forth — just gather -> synthesize -> act.
+Outgrowing the hand-rolled loop. The original (see git history) was the
+one-shot shape: gather context → one model call → send. Once it needed to run
+research across several topics and decide what's newsworthy, it moved to the
+**Claude Agent SDK**, which supplies the loop, typed messages, and tool
+permissioning.
+
+## Architecture
+
+```
+agent.py
+ ├─ get_google_credentials()          reused OAuth token (browser once)
+ ├─ SDK tools (mcp server "briefing") — the ONLY tools the model gets
+ │    ├─ get_weather                   open-meteo
+ │    ├─ get_calendar_events           Google Calendar API
+ │    ├─ research_topics               runs the last30days engine per topic, in parallel
+ │    └─ send_briefing_email           Gmail API — recipient FIXED in code
+ ├─ gate()                            deny-by-default: anything else is refused, no prompt
+ └─ query(prompt, options)            the agent loop (max 20 turns, $3 budget cap)
+```
+
+**last30days is called as a plain subprocess, not loaded as a plugin/skill.**
+Its `SKILL.md` is a large interactive setup-and-synthesis protocol written for
+a human-driven session — an unattended agent won't follow it (it bails to
+plain web search). `research_topics` runs the engine binary directly with
+fixed flags (`--emit=brief --quick --days 7`), which is the useful part.
+
+The model has no shell, no file writes, and no web tools. The email recipient
+is hard-coded to `$BRIEFING_TO_EMAIL`; the model's tool input for the
+recipient is ignored. Safe to leave in cron.
 
 ## One-time setup
 
-1. Follow the Google Cloud steps to get `credentials.json` (project + enable
-   Gmail API & Calendar API + OAuth consent screen + Desktop app OAuth client).
-   Put the downloaded file in this folder as `credentials.json`.
-   **Never commit this file** — it's already in `.gitignore`.
+### 1. The `claude` CLI (the Agent SDK shells out to it)
 
-2. Create a virtualenv and install deps:
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   pip install -r requirements.txt
-   ```
+```bash
+npm install -g @anthropic-ai/claude-code
+claude --version
+```
 
-3. Set environment variables (put these in your shell profile, or a local
-   `.env` you source before running):
-   ```bash
-   export ANTHROPIC_API_KEY=sk-ant-...
-   export BRIEFING_TO_EMAIL=you@gmail.com
-   export BRIEFING_LAT=34.05      # optional, defaults to Los Angeles
-   export BRIEFING_LON=-118.24    # optional
-   export BRIEFING_NEWS_FEED=https://feeds.bbci.co.uk/news/rss.xml  # optional
-   ```
+### 2. The last30days submodule
 
-4. Run it once manually:
-   ```bash
-   python agent.py
-   ```
-   This opens a browser to authorize Gmail + Calendar access. After you
-   approve, it saves `token.json` (also gitignored) so every future run is
-   silent — no browser, safe for cron.
+```bash
+git submodule update --init vendor/last30days-skill   # from the repo root
+```
+
+The engine has **no pip dependencies** (stdlib only) and runs on this venv's
+interpreter.
+
+### 3. Python deps
+
+```bash
+cd morning-briefing
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 4. Google `credentials.json`
+
+Google Cloud Console: new project, enable **Gmail API** + **Google Calendar
+API**, configure the OAuth consent screen (External; add your address under
+**Test users**), create an **OAuth client ID** of type **Desktop app**,
+download the JSON, save it here as `credentials.json` (gitignored). For an
+unattended daily cron, also hit **Publish app** — "Testing" mode expires the
+refresh token after 7 days.
+
+### 5. Environment variables
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+export BRIEFING_TO_EMAIL=you@gmail.com
+export BRIEFING_LAT=34.05      # optional, defaults to Los Angeles
+export BRIEFING_LON=-118.24    # optional
+```
+
+### 6. last30days API keys (optional — fuller source coverage)
+
+Zero-config sources (Reddit, Hacker News, GitHub, Polymarket, web) work with
+no keys. For X / YouTube / TikTok / Instagram, create `~/.config/last30days/.env`:
+
+```bash
+mkdir -p ~/.config/last30days && touch ~/.config/last30days/.env && open -e ~/.config/last30days/.env
+```
+
+```
+SCRAPECREATORS_API_KEY=...     # TikTok, Instagram, YouTube comments  (scrapecreators.com)
+XAI_API_KEY=...                # X/Twitter search + better reranking   (console.x.ai)
+```
+
+The engine reads that file itself. YouTube *video* transcripts also want
+`yt-dlp`: `brew install yt-dlp`.
+
+### 7. First run (authorizes Google)
+
+```bash
+python agent.py
+```
+
+Opens a browser once for Gmail + Calendar consent (**Advanced → Go to
+&lt;app&gt; (unsafe)** → allow both). Saves `token.json`; every later run is
+silent.
+
+## Topics
+
+Edit `topics.txt` — one topic per line, `#` comments and blank lines ignored.
+No code change needed. Each line is one `last30days` research call, all run in
+parallel.
+
+Optional per-topic targeting: append `| <flags>` and they're added to that
+topic's engine command — e.g. `--x-handle elonmusk`, `--subreddits
+servicenow`, `--github-repo owner/repo`. `last30days.py --help` lists them all.
+
+```
+AI agents | --subreddits AI_Agents,singularity,LocalLLaMA
+Elon Musk latest posts | --x-handle elonmusk
+```
 
 ## Scheduling with cron
 
-Find the absolute paths first:
 ```bash
-which python3   # or: readlink -f .venv/bin/python
-pwd
+which claude ; readlink -f .venv/bin/python ; pwd
 ```
 
-Then `crontab -e` and add a line to run at 7:00 AM daily:
 ```
-0 7 * * * cd /absolute/path/to/agents/morning-briefing && /absolute/path/to/.venv/bin/python agent.py >> briefing.log 2>&1
+0 7 * * * cd /abs/path/to/agents/morning-briefing && \
+  ANTHROPIC_API_KEY=sk-ant-... BRIEFING_TO_EMAIL=you@gmail.com \
+  PATH=/abs/dir/of/claude:/usr/bin:/bin \
+  /abs/path/to/.venv/bin/python agent.py >> briefing.log 2>&1
 ```
 
 Notes:
-- Cron runs with a minimal environment — it won't automatically have your
-  shell's exported variables. Either put the `export` lines in a small
-  `env.sh` and source it in the cron line, or set the variables directly in
-  the crontab with `ANTHROPIC_API_KEY=... BRIEFING_TO_EMAIL=... 0 7 * * * ...`.
-- The `>> briefing.log 2>&1` keeps a log so you can check it ran (and see
-  errors) without digging through system mail.
-- OAuth refresh tokens can eventually expire if unused for 6 months, or if
-  you're still in "Testing" mode on the consent screen (7-day expiry) —
-  publish the OAuth consent screen (still fine for personal use, doesn't
-  require Google review for the scopes used here) to avoid that.
+- Cron has a minimal env — it won't see your shell exports or find `claude` on
+  PATH. Set both explicitly (or source a small `env.sh`).
+- `>> briefing.log 2>&1` keeps a log; the run also prints turn count, elapsed,
+  and cost on exit.
+- `git submodule update --remote vendor/last30days-skill` occasionally to pull
+  engine updates.

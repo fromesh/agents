@@ -1,0 +1,16 @@
+# Topics researched each morning via the last30days engine.
+# One topic per line. Blank lines and lines starting with # are ignored.
+#
+# Optional per-topic targeting: add `| <flags>` after the topic and they are
+# appended to that topic's engine command. Useful flags:
+#   --x-handle <user>            centre X search on one account
+#   --x-related "<a,b,c>"        related X accounts / terms
+#   --subreddits <a,b,c>         pin subreddits instead of auto-resolving
+#   --github-repo <owner/repo>   focus GitHub on one repo
+# Full list: vendor/last30days-skill/skills/last30days/scripts/last30days.py --help
+
+AI agents | --subreddits AI_Agents,singularity,LocalLLaMA
+Moveworks
+ServiceNow | --subreddits servicenow
+Elon Musk latest notable posts and statements | --x-handle elonmusk
+Notable recent posts and statements from leading AI figures: Andrew Ng, Geoffrey Hinton, Demis Hassabis, Bret Taylor, Dario Amodei, Sam Altman, Sundar Pichai, Jeff Dean, Ilya Sutskever, Mira Murati | --x-related "AndrewYNg,sama,darioamodei,demishassabis,ilyasut,JeffDean,sundarpichai"
