@@ -558,8 +558,14 @@ One or two sentences: the conditions and what to plan for. You may start it
 with a single fitting weather emoji.
 
 TODAY
-Today's calendar as "- " bullets, one event per line ("- 3:00 pm: Connect
-Scoir"). If there are none, write "Nothing on the calendar."
+Today's calendar as "- " bullets, one event per line. Start each bullet
+with a single emoji that fits the event, then the time, then the title:
+"- 🏀 7:00 pm: Bball practice". Examples: 🎂 birthday, 🏫 school drop-off/
+pickup, 🏀 basketball, 🏈 football, 🥅 practice/training, 💅 nails, 📞 call,
+🍽️ dinner/lunch, ✈️ travel, 💼 work, 🩺 appointment, 🎉 party, 🎓 school
+event. Pick what actually fits; use 📌 if nothing else does. Keep the
+calendar-name tag (e.g. "[Calendar with Niala]") if present. If there are
+no events, write "Nothing on the calendar."
 
 WHAT THE INTERNET'S BEEN TALKING ABOUT
 "- " bullets, ONE per item, each on its own line. 5-8 items total across
