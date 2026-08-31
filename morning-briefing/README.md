@@ -31,7 +31,7 @@ agent.py
 Its `SKILL.md` is a large interactive setup-and-synthesis protocol written for
 a human-driven session — an unattended agent won't follow it (it bails to
 plain web search). `research_topics` runs the engine binary directly with
-fixed flags (`--emit=brief --quick --days 7`), which is the useful part.
+fixed flags (`--emit=context --quick --days 7`), which is the useful part.
 
 The model has no shell, no file writes, and no web tools. The email recipient
 is hard-coded to `$BRIEFING_TO_EMAIL`; the model's tool input for the
